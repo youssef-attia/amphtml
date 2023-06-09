@@ -9,7 +9,6 @@ import {
   sanitizeHtml,
   sanitizeTagsForTripleMustache,
 } from '../../../src/sanitizer';
-import {Purifier} from '#purifier';
 
 const TAG = 'amp-mustache';
 
@@ -144,8 +143,8 @@ export class AmpMustache extends BaseTemplate {
   serializeHtml_(html) {
     const doc = this.win.document;
     const root = doc.createElement('div');
-    const purifier = new Purifier(doc, {'RETURN_DOM': false,'RETURN_TRUSTED_TYPE':true}, null, false);
-    root./*OK*/ innerHTML = purifier.purifyHtml(html);
+    const sanitized = sanitizeHtml(html, doc);
+    root./*OK*/ innerHTML = sanitized;
     return this.tryUnwrap(root);
   }
 }

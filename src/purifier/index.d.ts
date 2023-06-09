@@ -8,8 +8,7 @@ export class Purifier {
   constructor(
     doc: Document,
     opt_config?: DOMPurify.Config,
-    opt_attrRewrite?: AttributeRewriterDef,
-    opt_useStandardConfig?: boolean
+    opt_attrRewrite?: AttributeRewriterDef
   );
 
   purifyHtml(dirty: string): HTMLElement;

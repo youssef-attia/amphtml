@@ -56,9 +56,8 @@ export class Purifier {
    * @param {!Document} doc
    * @param {!JsonObject=} opt_config
    * @param {!AttributeRewriterDef=} opt_attrRewrite
-   * @param {bool} opt_useStandardConfig
    */
-  constructor(doc, opt_config, opt_attrRewrite, useStandardConfig = true) {
+  constructor(doc, opt_config, opt_attrRewrite) {
     /** @private {!Document} */
     this.doc_ = doc;
 
@@ -74,7 +73,7 @@ export class Purifier {
     /** @private {!DomPurifyDef} */
     this.domPurifyTriple_ = purify(self);
 
-    const config = useStandardConfig ? Object.assign(opt_config || {}, standardPurifyConfig()): opt_config;
+    const config = Object.assign(opt_config || {}, standardPurifyConfig());
     this.domPurify_.setConfig(config);
     this.addPurifyHooks_(this.domPurify_, opt_attrRewrite);
 
