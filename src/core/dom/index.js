@@ -156,7 +156,20 @@ export function insertAtStart(root, element) {
  */
 export function addAttributesToElement(element, attributes) {
   for (const attr in attributes) {
-    element.setAttribute(attr, attributes[attr]);
+    if (attr === 'src' && self.trustedTypes && self.trustedTypes.createPolicy) {
+      const policy = self.trustedTypes.createPolicy(
+        'dom#addAttributesToElement',
+        {
+          createScriptURL: function (url) {
+            return url;
+          },
+        }
+      );
+      // @ts-ignore
+      element.setAttribute(attr, policy.createScriptURL(attributes[attr]));
+    } else {
+      element.setAttribute(attr, attributes[attr]);
+    }
   }
   return element;
 }

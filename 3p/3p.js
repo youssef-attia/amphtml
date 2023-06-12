@@ -85,7 +85,20 @@ export function writeScript(win, url, opt_cb) {
 export function loadScript(win, url, opt_cb, opt_errorCb) {
   /** @const {!Element} */
   const s = win.document.createElement('script');
-  s.src = url;
+  if (self.trustedTypes && self.trustedTypes.createPolicy) {
+    const policy = self.trustedTypes.createPolicy(
+      '3p#loadScript',
+      {
+        createScriptURL: function (url) {
+          return url;
+        },
+      }
+    );
+    // @ts-ignore
+    s.src = policy.createScriptURL(url);
+  } else {
+    s.src = url;
+  }
   if (opt_cb) {
     s.onload = opt_cb;
   }
