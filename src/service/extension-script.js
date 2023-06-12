@@ -158,7 +158,7 @@ export function createExtensionScript(win, extensionId, version) {
 
   if (self.trustedTypes && self.trustedTypes.createPolicy) {
     const policy = self.trustedTypes.createPolicy(
-      'validator-integration#loadScript',
+      'extension-script#createExtensionScript',
       {
         createScriptURL: function (url) {
           // Only allow trusted URLs
