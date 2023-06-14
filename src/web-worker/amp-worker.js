@@ -103,7 +103,19 @@ class AmpWorker {
           type: 'text/javascript',
         });
         const blobUrl = win.URL.createObjectURL(blob);
-        this.worker_ = new win.Worker(blobUrl);
+        if (self.trustedTypes && self.trustedTypes.createPolicy) {
+          const policy = self.trustedTypes.createPolicy(
+            'amp-worker#constructor',
+            {
+              createScriptURL: function (url) {
+                return url;
+              },
+            }
+          );
+          this.worker_ = new win.Worker(policy.createScriptURL(blobUrl));
+        } else {
+          this.worker_ = new win.Worker(blobUrl);
+        }
         this.worker_.onmessage = this.receiveMessage_.bind(this);
       });
 
