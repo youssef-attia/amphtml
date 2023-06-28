@@ -72,12 +72,36 @@ class AmpWorker {
     // Use RTV to make sure we fetch prod/canary/experiment correctly.
     const useLocal = getMode().localDev || getMode().test;
     const useRtvVersion = !useLocal;
-    const url = calculateEntryPointScriptUrl(
-      loc,
-      'ww',
-      useLocal,
-      useRtvVersion
-    );
+
+    let url = '';
+    if (self.trustedTypes && self.trustedTypes.createPolicy) {
+      const policy = self.trustedTypes.createPolicy('amp-worker#fetchUrl', {
+        createScriptURL: function (url) {
+          // Only allow trusted URLs
+          const regexURL = new RegExp(
+            // eslint-disable-next-line local/no-forbidden-terms
+            '^https://([a-zA-Z0-9_-]+.)?cdn.ampproject.org(/.*)?$'
+          );
+          const testRegexURL = new RegExp('^([a-zA-Z0-9_-]+.)?localhost$');
+          if (
+            regexURL.test(url) ||
+            (getMode().test && testRegexURL.test(new URL(url).hostname)) ||
+            (new URL(url).host === 'fonts.googleapis.com' &&
+              (url.slice(-5) === 'ww.js' || url.slice(-9) === 'ww.min.js'))
+          ) {
+            return url;
+          } else {
+            return '';
+          }
+        },
+      });
+      url = policy.createScriptURL(
+        calculateEntryPointScriptUrl(loc, 'ww', useLocal, useRtvVersion)
+      );
+    } else {
+      url = calculateEntryPointScriptUrl(loc, 'ww', useLocal, useRtvVersion);
+    }
+
     dev().fine(TAG, 'Fetching web worker from', url);
 
     /** @private {Worker} */
@@ -104,6 +128,7 @@ class AmpWorker {
         });
         const blobUrl = win.URL.createObjectURL(blob);
         if (self.trustedTypes && self.trustedTypes.createPolicy) {
+          // We can trust the url for this policy usage because the blobUrl pulls the script from a controlled source, the ww.js file.
           const policy = self.trustedTypes.createPolicy(
             'amp-worker#constructor',
             {
