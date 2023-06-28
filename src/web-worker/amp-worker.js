@@ -77,7 +77,7 @@ class AmpWorker {
     if (self.trustedTypes && self.trustedTypes.createPolicy) {
       const policy = self.trustedTypes.createPolicy('amp-worker#fetchUrl', {
         createScriptURL: function (url) {
-          // Only allow trusted URLs
+          // Only allow the correct webworker url to pass through
           const regexURL = new RegExp(
             // eslint-disable-next-line local/no-forbidden-terms
             '^https://([a-zA-Z0-9_-]+.)?cdn.ampproject.org(/.*)?$'
