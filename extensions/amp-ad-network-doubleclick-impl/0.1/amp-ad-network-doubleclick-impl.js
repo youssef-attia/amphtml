@@ -85,6 +85,7 @@ import {
 import {SafeframeHostApi} from './safeframe-host';
 import {
   TFCD,
+  TFUA,
   constructSRABlockParameters,
   serializeTargeting,
   sraBlockCallbackHandler,
@@ -169,7 +170,7 @@ const TARGETING_MACRO_ALLOWLIST = {
 
 /**
  * Map of pageview tokens to the instances they belong to.
- * @private {!Object<string, !AmpAdNetworkDoubleclickImpl>}
+ * @private {!{[key: string]: !AmpAdNetworkDoubleclickImpl}}
  */
 let tokensToInstances = {};
 
@@ -522,7 +523,7 @@ export class AmpAdNetworkDoubleclickImpl extends AmpA4A {
   /**
    * For easier unit testing.
    * @param {!Array<!../../../src/experiments.ExperimentInfo>} experimentInfoList
-   * @return {!Object<string, string>}
+   * @return {!{[key: string]: string}}
    */
   randomlySelectUnsetExperiments_(experimentInfoList) {
     return randomlySelectUnsetExperiments(this.win, experimentInfoList);
@@ -622,14 +623,24 @@ export class AmpAdNetworkDoubleclickImpl extends AmpA4A {
   /**
    * @param {?ConsentTupleDef} consentTuple
    * @param {!Array<!AmpAdNetworkDoubleclickImpl>=} instances
-   * @return {!Object<string,string|boolean|number>}
+   * @return {!{[key: string]: string|boolean|number}}
    * @visibleForTesting
    */
   getPageParameters(consentTuple, instances) {
     instances = instances || [this];
     const tokens = getPageviewStateTokensForAdRequest(instances);
-    const {additionalConsent, consentString, consentStringType, gdprApplies} =
-      consentTuple;
+    const {
+      additionalConsent,
+      consentSharedData,
+      consentString,
+      consentStringType,
+      gdprApplies,
+    } = consentTuple;
+
+    const tfcdFromSharedData = consentSharedData?.['doubleclick-tfcd'];
+    const tfuaFromSharedData = consentSharedData?.['doubleclick-tfua'];
+    const tfcdFromJson = this.jsonTargeting && this.jsonTargeting[TFCD];
+    const tfuaFromJson = this.jsonTargeting && this.jsonTargeting[TFUA];
 
     return {
       'ptt': 13,
@@ -654,6 +665,8 @@ export class AmpAdNetworkDoubleclickImpl extends AmpA4A {
         consentStringType == CONSENT_STRING_TYPE.US_PRIVACY_STRING
           ? consentString
           : null,
+      'tfcd': tfcdFromSharedData || tfcdFromJson || null,
+      'tfua': tfuaFromSharedData || tfuaFromJson || null,
     };
   }
 
@@ -666,12 +679,10 @@ export class AmpAdNetworkDoubleclickImpl extends AmpA4A {
 
   /**
    * Constructs block-level url parameters.
-   * @return {!Object<string,string|boolean|number>}
+   * @return {!{[key: string]: string|boolean|number}}
    */
   getBlockParameters_() {
     devAssert(this.initialSize_);
-    devAssert(this.jsonTargeting);
-    const tfcd = this.jsonTargeting && this.jsonTargeting[TFCD];
     this.win['ampAdGoogleIfiCounter'] = this.win['ampAdGoogleIfiCounter'] || 1;
     this.ifi_ =
       (this.isRefreshing && this.ifi_) || this.win['ampAdGoogleIfiCounter']++;
@@ -706,7 +717,6 @@ export class AmpAdNetworkDoubleclickImpl extends AmpA4A {
       'sz': this.isSinglePageStoryAd ? '1x1' : this.parameterSize,
       'output': 'html',
       'impl': 'ifr',
-      'tfcd': tfcd == undefined ? null : tfcd,
       'adtest': isInManualExperiment(this.element) ? 'on' : null,
       'ifi': this.ifi_,
       'rc': this.refreshCount_ || null,
@@ -899,7 +909,7 @@ export class AmpAdNetworkDoubleclickImpl extends AmpA4A {
 
   /**
    * Converts identity token response to ad request parameters.
-   * @return {!Object<string,string>}
+   * @return {!{[key: string]: string}}
    */
   buildIdentityParams() {
     return this.identityToken
@@ -1048,9 +1058,9 @@ export class AmpAdNetworkDoubleclickImpl extends AmpA4A {
   /**
    * Appends the callout value to the keys of response to prevent a collision
    * case caused by multiple vendors returning the same keys.
-   * @param {!Object<string, string>} response
+   * @param {!{[key: string]: string}} response
    * @param {string} callout
-   * @return {!Object<string, string>}
+   * @return {!{[key: string]: string}}
    * @private
    */
   rewriteRtcKeys_(response, callout) {
@@ -1552,7 +1562,7 @@ export class AmpAdNetworkDoubleclickImpl extends AmpA4A {
     const {parentStyle, parentWidth} = this.flexibleAdSlotData_;
     const isRtl = isRTL(this.win.document);
     const dirStr = isRtl ? 'Right' : 'Left';
-    const /** !Object<string, string> */ style = this.inZIndexHoldBack_
+    const /** !{[key: string]: string} */ style = this.inZIndexHoldBack_
         ? {'z-index': '11'}
         : {};
     // Compute offset margins if the slot is not centered by default.
@@ -1665,7 +1675,7 @@ export class AmpAdNetworkDoubleclickImpl extends AmpA4A {
   /**
    * Groups slots by type and networkId from data-slot parameter.  Exposed for
    * ease of testing.
-   * @return {!Promise<!Object<string,!Array<!Promise<!../../../src/base-element.BaseElement>>>>}
+   * @return {!Promise<!{[key: string]: !Array<!Promise<!../../../src/base-element.BaseElement}>>>}
    * @visibleForTesting
    */
   groupSlotsForSra() {
