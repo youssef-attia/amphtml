@@ -74,33 +74,38 @@ class AmpWorker {
     const useRtvVersion = !useLocal;
 
     let url = '';
+
+    const policy = {
+      createScriptURL: function (url) {
+        // Only allow the correct webworker url to pass through
+        const regexURL = new RegExp(
+          // eslint-disable-next-line local/no-forbidden-terms
+          '^https://([a-zA-Z0-9_-]+.)?cdn.ampproject.org(/.*)?$'
+        );
+        const testRegexURL = new RegExp('^([a-zA-Z0-9_-]+.)?localhost$');
+        if (
+          regexURL.test(url) ||
+          (getMode().test && testRegexURL.test(new URL(url).hostname)) ||
+          (new URL(url).host === 'fonts.googleapis.com' &&
+            (url.slice(-5) === 'ww.js' || url.slice(-9) === 'ww.min.js'))
+        ) {
+          return url;
+        } else {
+          return '';
+        }
+      },
+    };
+
     if (self.trustedTypes && self.trustedTypes.createPolicy) {
-      const policy = self.trustedTypes.createPolicy('amp-worker#fetchUrl', {
-        createScriptURL: function (url) {
-          // Only allow the correct webworker url to pass through
-          const regexURL = new RegExp(
-            // eslint-disable-next-line local/no-forbidden-terms
-            '^https://([a-zA-Z0-9_-]+.)?cdn.ampproject.org(/.*)?$'
-          );
-          const testRegexURL = new RegExp('^([a-zA-Z0-9_-]+.)?localhost$');
-          if (
-            regexURL.test(url) ||
-            (getMode().test && testRegexURL.test(new URL(url).hostname)) ||
-            (new URL(url).host === 'fonts.googleapis.com' &&
-              (url.slice(-5) === 'ww.js' || url.slice(-9) === 'ww.min.js'))
-          ) {
-            return url;
-          } else {
-            return '';
-          }
-        },
-      });
-      url = policy.createScriptURL(
-        calculateEntryPointScriptUrl(loc, 'ww', useLocal, useRtvVersion)
+      const policy = self.trustedTypes.createPolicy(
+        'amp-worker#fetchUrl',
+        policy
       );
-    } else {
-      url = calculateEntryPointScriptUrl(loc, 'ww', useLocal, useRtvVersion);
     }
+
+    url = policy.createScriptURL(
+      calculateEntryPointScriptUrl(loc, 'ww', useLocal, useRtvVersion)
+    );
 
     dev().fine(TAG, 'Fetching web worker from', url);
 
